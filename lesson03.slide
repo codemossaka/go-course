@@ -1,0 +1,121 @@
+Примеры программ на Golang
+
+28 октября 2016
+
+Владимир Ананьев
+АО "Программный Регион"
+vladimir.ananyev@regium.com
+
+* Домашнее задание: track-server
+
+- Не так сложно, как могло показаться
+- Используем документацию [[https://golang.org/pkg/net/http/]]
+- Сходу может быть сложновато, поэтому гуглим *golang*http*server* :)
+- Также поступаем с [[https://golang.org/pkg/encoding/base64/]]
+- Также поступаем с *golang*redirect*
+
+  http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+  	str := r.URL.EscapedPath()[1:] // Все элементы массива, начиная с индекса 1
+  	url, err := base64.StdEncoding.DecodeString(str)
+  	if err != nil {
+  		.. // Обработка ошибки
+  	}
+
+  	http.Redirect(w, r, "http://"+string(url), http.StatusFound) // 302, трехсотые коды ответа
+  })
+  http.ListenAndServe(":8085", nil))
+
+* Возвращаемые значения
+
+- [[https://gobyexample.com/]]
+
+  package main
+
+  import "fmt"
+
+  func vals() (int, int) {
+      return 3, 7
+  }
+
+  func main() {
+      a, b := vals()
+      fmt.Println(a) // 3
+      fmt.Println(b) // 7
+
+      _, c := vals()
+      fmt.Println(c) // 7
+  }
+
+* Функции с переменным числом параметров
+
+  package main
+
+  import "fmt"
+
+  func sum(nums ...int) {
+      fmt.Print(nums, " ")
+      total := 0
+      for _, num := range nums {
+          total += num
+      }
+      fmt.Println(total)
+  }
+
+  func main() {
+      sum(1, 2)    // 3
+      sum(1, 2, 3) // 6
+
+      nums := []int{1, 2, 3, 4}
+      sum(nums...) // 10
+  }
+
+* Замыкания (анонимные функции)
+
+  package main
+
+  import "fmt"
+
+  func intSeq() func() int {
+      i := 0
+      return func() int {
+          i += 1
+          return i
+      }
+  }
+
+  func main() {
+      nextInt := intSeq()
+
+      fmt.Println(nextInt()) // 1
+      fmt.Println(nextInt()) // 2
+      fmt.Println(nextInt()) // 3
+
+      newInts := intSeq()
+      fmt.Println(newInts()) // 1
+  }
+
+* Указатели
+
+
+
+* Goroutines
+
+  func f(from string) {
+      for i := 0; i < 3; i++ {
+          fmt.Println(from, ":", i)
+      }
+  }
+
+  func main() {
+      f("direct")
+      go f("goroutine")
+
+      go func(msg string) {
+          fmt.Println(msg)
+      }("going")
+
+      var input string
+      fmt.Scanln(&input) // Ожидание ввода
+      fmt.Println("done")
+  }
+
