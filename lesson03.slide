@@ -96,7 +96,26 @@ vladimir.ananyev@regium.com
 
 * Указатели
 
+  func zeroval(ival int) {
+      ival = 0
+  }
 
+  func zeroptr(iptr *int) {
+      *iptr = 0
+  }
+
+  func main() {
+      i := 1
+      fmt.Println("initial:", i) // 1
+
+      zeroval(i)
+      fmt.Println("zeroval:", i) // 1
+
+      zeroptr(&i)
+      fmt.Println("zeroptr:", i) // 0
+
+      fmt.Println("pointer:", &i) // 0x1040e0f8
+  }
 
 * Goroutines
 
@@ -117,5 +136,168 @@ vladimir.ananyev@regium.com
       var input string
       fmt.Scanln(&input) // Ожидание ввода
       fmt.Println("done")
+  }
+
+* Каналы
+
+  package main
+
+  import "fmt"
+
+  func main() {
+      messages := make(chan string)
+
+      go func() { messages <- "ping" }()
+
+      msg := <-messages
+      fmt.Println(msg)
+  }
+
+* Буферизованные каналы
+
+  package main
+
+  import "fmt"
+
+  func main() {
+      messages := make(chan string, 2)
+
+      messages <- "buffered"
+      messages <- "channel"
+
+      fmt.Println(<-messages)
+      fmt.Println(<-messages)
+  }
+
+* Синхронизация с помощью каналов
+
+  package main
+
+  import "fmt"
+  import "time"
+
+  func worker(done chan bool) {
+      fmt.Print("working...")
+      time.Sleep(time.Second)
+      fmt.Println("done")
+
+      done <- true
+  }
+
+  func main() {
+      done := make(chan bool, 1)
+      go worker(done)
+
+      <-done
+  }
+
+* Направление каналов
+
+  package main
+
+  import "fmt"
+
+  func ping(pings chan<- string, msg string) {
+      pings <- msg
+  }
+
+  func pong(pings <-chan string, pongs chan<- string) {
+      msg := <-pings
+      pongs <- msg
+  }
+
+  func main() {
+      pings := make(chan string, 1)
+      pongs := make(chan string, 1)
+      ping(pings, "passed message")
+      pong(pings, pongs)
+      fmt.Println(<-pongs)
+  }
+
+* Select по каналам
+
+  func main() {
+      c1 := make(chan string)
+      c2 := make(chan string)
+
+      go func() {
+          time.Sleep(time.Second * 1)
+          c1 <- "one"
+      }()
+      go func() {
+          time.Sleep(time.Second * 2)
+          c2 <- "two"
+      }()
+
+      for i := 0; i < 2; i++ {
+          select { // default - ?
+          case msg1 := <-c1:
+              fmt.Println("received", msg1)
+          case msg2 := <-c2:
+              fmt.Println("received", msg2)
+          }
+      }
+  }
+
+* Range по каналам
+
+  package main
+
+  import "fmt"
+
+  func main() {
+      queue := make(chan string, 2)
+      queue <- "one"
+      queue <- "two"
+      close(queue)
+
+      for elem := range queue { // Широко используется в клиентских библиотеках
+          fmt.Println(elem)
+      }
+  }
+
+* Panic
+
+  package main
+
+  import "os"
+
+  func main() {
+
+      panic("a problem")
+
+      _, err := os.Create("/tmp/file")
+      if err != nil {
+          panic(err)
+      }
+  }
+
+- Панику можно отловить (recover [[https://github.com/golang/go/wiki/PanicAndRecover]])
+
+* Defer
+
+  func main() {
+      f := createFile("/tmp/defer.txt")
+      defer closeFile(f)
+      writeFile(f)
+  }
+
+  func createFile(p string) *os.File {
+      fmt.Println("creating")
+      f, err := os.Create(p)
+      if err != nil {
+          panic(err)
+      }
+      return f
+  }
+
+  func writeFile(f *os.File) {
+      fmt.Println("writing")
+      fmt.Fprintln(f, "data")
+  }
+
+  func closeFile(f *os.File) {
+      fmt.Println("closing")
+      f.Close()
   }
 
