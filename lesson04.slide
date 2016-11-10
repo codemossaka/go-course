@@ -1,0 +1,127 @@
+Создание вебсайта на Golang
+
+11 ноября 2016
+
+Владимир Ананьев
+АО "Программный Регион"
+vladimir.ananyev@regium.com
+
+* Зачем создавать сайты на Golang?
+
+- Всегда нужны графические интерфейсы для различных подсистем
+- Очень просто
+- Быстро
+- Без дополнительных настроек *web-серверов* (типа IIS для ASP.NET, Apache для PHP и т.п.)
+
+*Примечание*: лучше всегда сразу делать графический веб-интерфейс, а не платформо-зависимый системный интерфейс (окна и т.п.)
+
+* Как мы используем Golang сайты в компании
+
+.image logo.png
+.caption [[http://www.regium.com]]
+
+* Управление аналитическими системами
+
+.image analytics.png 510 850
+
+- *martini*framework* + *custom*design*
+
+* Системы мониторинга
+
+.image rorschach.png _ 1000
+
+- Самописный фреймворк на основе *net/http* + *Bootstrap*
+*Примечание*: самописный фреймворк - это буквально 2 функции :)
+
+* Системы конфигурации
+
+.image consul.png _ 1000
+*consul configuration & discovery
+
+* Системы передачи сообщений
+
+.image nsq.png 500 1000
+*nsq message processing system
+
+* Основной подход к разработке - MVC
+Model-View-Controller
+
+.image mvc.png _ 600
+
+* Роутинг
+.image routing.png _ 450
+
+- Классический пример: *http://example.com/controller/action*
+
+* Роутинг - примеры реализации в разных библиотеках
+
+- *net/http*:
+  func statusHandler(db *sql.DB) http.HandlerFunc {
+  	return func(wr http.ResponseWriter, req *http.Request) {
+  		...
+  	}
+  }
+
+  http.Handle("/status", statusHandler(db))
+  http.Handle("/import_news", importNewsHandler(db))
+  ...
+  http.ListenAndServe(":8080", nil)
+
+- *Gin*Framework*:
+
+  router := gin.Default()
+  router.GET("/someGet", getting)
+  router.POST("/somePost", posting)
+  ...
+  router.Run(":8080")
+
+* Контроллер (Controller)
+
+- Набор функций для генерации ответа пользователю
+- Одна функция == action (*http://example.com/controller/action*)
+- Пример (без использования сторонних фреймворков):
+
+  type Controller struct {
+  ...
+  }
+
+  func (c *Controller) Action(wr http.ResponseWriter, req *http.Request) {
+  	resp := interface{}
+  
+  	bytes, err := json.Marshal(resp)
+  		if err != nil {
+  			writeErr(wr, err)
+  			return
+  		}
+  	wr.Write(bytes)
+  }
+
+* Контроллер для Gin Framework
+
+- Не сильно отличается
+
+* Модель (Model)
+
+* Отображение (View)
+
+* Шаблоны (Templates)
+
+* Middleware
+
+.image middleware.png
+- Цепочка дополнительных обработчиков в конвеере обработки запроса
+- Активно применяется в *Gin*Framework*, *Martini*Framework*, *Revel*Framewok*
+
+* Примеры middleware
+
+* Задание
+
+- Создать простой веб-сайт (название *website*) на основе библиотеки *net/http*
+- Без использования фреймворков, только *net/http*
+- На сайте одна страница которая отображает список пользователей в виде таблицы
+- Заголовки таблицы: "First Name", "Email", "Username"
+- Необходимо использовать *MVC*подход*
+- Данные в модели заполняются программно, т.е. где-то хардкодом забиваются
+- Выводить таблицу с использованием шаблона (Templates)
+.image users.png
+
