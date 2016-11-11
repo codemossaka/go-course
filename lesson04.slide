@@ -15,6 +15,8 @@ vladimir.ananyev@regium.com
 
 *Примечание*: лучше всегда сразу делать графический веб-интерфейс, а не платформо-зависимый системный интерфейс (окна и т.п.)
 
+- Но есть и свои недостатки при использовании Golang сайтов
+
 * Как мы используем Golang сайты в компании
 
 .image logo.png
@@ -36,17 +38,19 @@ vladimir.ananyev@regium.com
 * Системы конфигурации
 
 .image consul.png _ 1000
-*consul configuration & discovery
+*consul configuration & discovery ([[https://www.consul.io]])
 
 * Системы передачи сообщений
 
 .image nsq.png 500 1000
-*nsq message processing system
+*nsq message processing system ([[http://nsq.io]])
 
-* Основной подход к разработке - MVC
+* Основной подход к разработке - архитектурный паттерн MVC
 Model-View-Controller
 
-.image mvc.png _ 600
+.image mvc.png _ 550
+
+- Для чего? Для разделения графического интерфейса от бизнес-логики
 
 * Роутинг
 .image routing.png _ 450
@@ -67,7 +71,8 @@ Model-View-Controller
   ...
   http.ListenAndServe(":8080", nil)
 
-- *Gin*Framework*:
+- *Gin*Framework*, один из самых быстрых роутингов:
+[[https://github.com/gin-gonic/gin/blob/master/README.md]]
 
   router := gin.Default()
   router.GET("/someGet", getting)
@@ -78,6 +83,7 @@ Model-View-Controller
 * Контроллер (Controller)
 
 - Набор функций для генерации ответа пользователю
+- Совмещает в себе вызов функций бизнес-логики и формирование представления
 - Одна функция == action (*http://example.com/controller/action*)
 - Пример (без использования сторонних фреймворков):
 
@@ -99,12 +105,111 @@ Model-View-Controller
 * Контроллер для Gin Framework
 
 - Не сильно отличается
+- Да и в других фреймворках практически тоже самое
+
+  type Controller struct {
+  ...
+  }
+
+  func (c *Controller) Action(ctx *gin.Context) {
+  ...
+  }
+
+- Есть готовый мощный объект *gin.Context*, который передается в методы-обработчики
+
 
 * Модель (Model)
 
-* Отображение (View)
+- Модель - это бизнес-логика приложения
+- Модель обладает знаниями о себе самой и не знает о контроллерах и представлениях
+- Для некоторых проектов модель — это просто слой данных (база данных, XML-файл, ...)
+- Для других проектов модель — это менеджер базы данных, набор объектов или просто логика приложения
+
+  type User struct {
+  	Id    int    `bson:"_id"`
+  	Login string `bson:"login"`
+  }
+
+  // Gets user from database by login
+  func GetUser(db *mgo.Database, login string) (User, error) {
+  	var result User
+  	err := db.C(usersCollName).Find(bson.M{"login": login}).One(&result)
+  	return result, err
+  }
+
+* Представление (View)
+
+- В представлении реализуется визуализация данных, которые получаются от модели любым способом
+- HTML, JSON, XML, RSS ...
+
+  // Gin framework
+  router.GET("/index", func(c *gin.Context) {
+  	c.HTML(http.StatusOK, "index.tmpl", gin.H{
+  		"title": "Main website",
+  	})
+  })
+
+  <!-- Index template (View) -->
+  <html>
+  	<h1>
+  		{{ .Title }}
+  	</h1>
+  </html>
 
 * Шаблоны (Templates)
+
+- Есть две мощные библиотеки:
+- [[https://golang.org/pkg/text/template]]
+- [[https://golang.org/pkg/html/template]]
+- Есть множество вариантов подстановок (условия, циклы, вызовы функций внутри шаблона)
+
+  <!-- Например, цикл для формирования списка данных -->
+  {{ range .Pages }}
+  	<li>{{ $.Name }}</li>
+  {{ end }}
+
+* Генерация готового представления (view) из шаблона
+
+  import (
+  	"html/template"
+  	"os"
+  )
+
+  // Здесь просто переменная, можно грузить из файла
+  var tmpl = `<html><h1>{{ .Title }}</h1></html>`
+
+  data := struct{
+  	Title string
+  	}{"Main page"}
+
+  t := template.New("name")
+  t, err := t.Parse(tmpl)
+  if err != nil {
+  	panic(err)
+  }
+
+  err = t.Execute(os.Stdout, data)
+  if err != nil {
+  	panic(err)
+  }
+
+* Есть другой вариант - использовать AJAX для отображения данных на странице
+
+- Asynchronous Javascript and XML
+- Появляется два хендлера: для статического HTML и для данных в формате JSON
+- Вызываем скриптом специальный хендлер, который возвращает JSON
+- Изменяем элементы в DOM (Document Object Model)
+
+  function updateSubscribers() {
+  	var url = "subscribers?startDate=" + startDate + "&endDate=" + endDate +
+  		"&curDate=" + curDate;
+
+  	$.get(url, function(response) {
+  		var attr = "data-val";
+  		$("#total").attr(attr, response.total);
+  		$("#active").attr(attr, response.active);
+  	});
+  }
 
 * Middleware
 
@@ -113,6 +218,29 @@ Model-View-Controller
 - Активно применяется в *Gin*Framework*, *Martini*Framework*, *Revel*Framewok*
 
 * Примеры middleware
+
+- Gin Framework
+  router := gin.Default()
+  router.GET("/benchmark", MyBenchLogger(), benchEndpoint)
+
+- Martini Framework
+  email = controllers.EmailController{}
+
+  func (ec *EmailController) Index(rndr render.Render, req *http.Request, sess *session.Session) {
+  	data, err := dbmodels.GetSites(dbmodels.MongoDB, sess.User)
+  	if err != nil {
+  		Error(rndr, req, "emailIndex", "Unable to get sites", err)
+  		return
+  	}
+  	page := models.NewWebPage(req, "Emails", "emailIndex", data)
+  	rndr.HTML(200, "email_index", page, GetHtmlOptions(sess))
+  }
+
+  m := martini.Classic()
+  m.Group("/email", func(router martini.Router) {
+  		router.Get("/clone", loginProtect, mngrProtect, siteProtect, email.Clone)
+  		router.Get("/index", loginProtect, mngrProtect, email.Index)
+  }
 
 * Задание
 
