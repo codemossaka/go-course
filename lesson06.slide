@@ -55,6 +55,13 @@ vladimir.ananyev@regium.com
 
 * Плюсы и минусы использования текстовых файлов
 
+- Легко подгружаются в приложение
+- Не требуется сетевого соединения, файлик всегда рядом
+
+- Для микросервисной архитектуры происходит глобальное дублирование конфигурации
+- Соответственно сложно вносить изменения, т.к. нужно обновлять целый ряд конфигурационных файлов
+- Для монолитного приложения файл конфигурации - идеальный вариант
+
 * Готовые системы конфигурирования
 
 - Consul
@@ -64,7 +71,9 @@ vladimir.ananyev@regium.com
 * Преимущества использования Consul
 
 - Удобное конфигурирование сервисов
-- Можно создать кластер конфигурации
+- Нет дублирования общей конфигурации сервисов
+- Можно создать кластер конфигурации для отказоустойчивости
+- Отдельный мощный инструмент - *Service*Discovery*
 
 * Как это использовать в Golang?
 
@@ -92,6 +101,8 @@ vladimir.ananyev@regium.com
 
   ./consul agent -server -bind 127.0.0.1 -ui-dir ~/consul/ui/ -data-dir ~/consul/data/
 
+- [[https://www.consul.io/intro/vs/index.html][Consul vs. Other Software]]
+
 * Что мы видим на странице администрирования
 
 - *Services* - Сервисы, которые зарегистрированы в Consul
@@ -103,12 +114,39 @@ vladimir.ananyev@regium.com
 
 * Демо: как считать конфигурацию из Consul
 
-- 
+- ! CONSUL_HTTP_ADDR
+- Все ключи и значения изначально строковые, cвязка с пакетом *"reflect"*
+
+  func Fill(cfg interface{}) {
+  	// Folder for searching inner keys
+  	folder := reflect.TypeOf(cfg).Elem().Name()
+  	elem := reflect.ValueOf(cfg).Elem()
+  	for i := 0; i < elem.NumField(); i++ {
+  		// Use field name as a key
+  		key := elem.Type().Field(i).Name
+  		val, err := Get(folder + "/" + key)
+  		if err != nil {
+  			return err
+  		}
+  		switch elem.Field(i).Interface().(type) {		
+  		case int, int32:
+  			v, err := strconv.ParseInt(val, 0, 32)
+  			if err != nil {
+  				return fmt.Errorf("%v: %v", ErrInvalidInt, val)
+  			}
+  			elem.Field(i).SetInt(v)
+  		}
+  	}
 
 * Задание
 
-- Скачать и запустить Consul вместе с UI ([[https://www.consul.io/downloads.html]])
+- Скачать и запустить *Consul*вместе*с*UI* ([[https://www.consul.io/downloads.html]])
 - [[https://releases.hashicorp.com/consul/0.7.1/consul_0.7.1_linux_amd64.zip]]
 - [[https://releases.hashicorp.com/consul/0.7.1/consul_0.7.1_web_ui.zip]]
+- Взять приложение *track-server*
+- Создать в нем пакет конфигурации со структурой конфигурации *TrackServerConfig*
+- В эту структуру забить *порт*, на котором будет стартовать *track-server*
+- Значение этого *порта* нужно получать из *Consul*
+- Если не получится поднять свой Consul, то можно использовать открытый [[https://demo.consul.io]]
 
 
