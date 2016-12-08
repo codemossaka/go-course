@@ -1,0 +1,105 @@
+Docker compose, Redis
+
+9 декабря 2016
+
+Владимир Ананьев
+АО "Программный Регион"
+vladimir.ananyev@regium.com
+
+* Docker compose
+
+.image compose.png _ 500
+
+* Что это такое?
+
+- [[https://docs.docker.com/compose/overview/]]
+- Утилита для создания и запуска *многоконтейнерных* приложений (систем)
+- Используется *один* конфигурационный файл для конфигурации всего приложения
+- Используется *одна* команда для создания и запуска такого приложения
+
+* Основные варианты использования
+
+- Окружение для разработчика (development environment). Позволяет быстро разворачивать окружение со всеми зависимостями: базы данных, очереди, кеши, веб-сервисы и т.п.
+  $ docker-compose up
+- Окружение для автоматического тестирования (automated testing environment)
+  $ docker-compose up -d
+  $ ./run_tests
+  $ docker-compose down
+
+*Демо:* показать преимущество подхода с использованием Compose
+
+* Установка
+
+- В первую очередь нужно установить сам *Docker*
+- Для *Windows* и *MacOS* устанавливается в рамках *Docker*Toolbox*
+- Для Linux необходимы следующие шаги
+- $ curl -L "https://github.com/docker/compose/releases/download/1.9.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+- $ chmod +x /usr/local/bin/docker-compose
+- И проверить работоспособность
+- $ docker-compose --version
+
+  $ docker-compose --version
+  docker-compose version 1.9.0, build 2585387
+
+- Альтернативный метод - использовать pip
+  pip install docker-compose
+
+* 
+.image redis.png _ 470
+- [[https://redis.io/]]
+- Используется как *in-memory*база*данных*, *кеш* и *сервис*обмена* *сообщениями*
+- Это *key-value* база данных
+- Ключ (*Key*) - любая последовательность байт, в простейшем случае - строка.
+- Значение (*Value*) - *string,*hash,*list,*set,*sorted*set*,*bitmaps*,*hyperLogLogs*
+- [[https://redis.io/topics/data-types-intro]]
+- [[http://try.redis.io/]]
+
+*Демо:* Что же такое key-value и как это использовать?
+
+* Установка
+  $ wget http://download.redis.io/releases/redis-3.2.6.tar.gz
+  $ tar xzf redis-3.2.6.tar.gz
+  $ cd redis-3.2.6
+  $ make
+- Для контроля
+  $ make test
+- Запуск
+  $ src/redis-server
+- Доступ
+  $ src/redis-cli
+
+* Основные команды
+- [[https://redis.io/commands]]
+- PING
+- SET/GET
+- DEL
+- EXISTS
+- EXPIRES
+- KEYS
+- TTL
+- TYPE
+- INCR/DECR/INCRBY
+
+*Демо:* запуск команд через консоль
+
+* Клиент Redis'а для Golang
+
+* Сборка Compose: Golang приложение + Redis
+
+
+- Создаем файл *docker-compose.yml*:
+  version: '2'
+  services:
+    web:
+      build: .
+      ports:
+       - "8080:8080"
+      depends_on:
+       - redis
+    redis:
+      image: redis
+
+  $ docker-compose up
+
+
+  
